@@ -13,7 +13,7 @@ let isEmpty = function (property) {
 
 let PostSchema = new Schema(
   {
-    author: require('./user'),
+    postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     title: {
       type: String,
       required: true,
