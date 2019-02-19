@@ -12,6 +12,7 @@
     "dotenv": "^6.2.0",
     "koa": "^2.7.0",
     "koa-joi-router": "^5.2.0",
-    "mongoose": "^5.4.12"
+    "mongoose": "^5.4.12",
+    "mongoose-auto-increment-reworked": "^1.2.1"
   }
 }

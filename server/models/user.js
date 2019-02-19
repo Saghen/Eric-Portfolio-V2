@@ -20,22 +20,19 @@ let UserSchema = new Schema(
     firstName: {
       type: String,
       trim: true,
-      required: true,
-      validate: [isEmpty, 'Please fill in your first name']
+      required: 'Please fill in your first name'
     },
     lastName: {
       type: String,
       trim: true,
-      required: true,
-      validate: [isEmpty, 'Please fill in your last name']
+      required: 'Please fill in your last name'
     },
     email: {
       type: String,
       trim: true,
       unique: true,
       lowercase: true,
-      required: true,
-      validate: [isEmpty, 'Please fill in your email'],
+      required: 'Please fill in an email',
       match: [/.+\@.+\..+/, 'Please fill a valid email address']
     },
     password: {
@@ -46,6 +43,10 @@ let UserSchema = new Schema(
         'Password must contain an uppercase, lowercase, and a digit and be atleast 8 characters.'
       ]
     },
+    profileImage: {
+      type: String,
+      default: 'placeholder.png' // use a folder called imgs/profiles/placeholder.png
+    },
     roles: {
       type: [
         {
@@ -55,18 +56,12 @@ let UserSchema = new Schema(
       ],
       default: [C.roles[1]]
     },
-    profile: {
-      required: true,
-      type: {}
-    },
     resetPasswordToken: String,
     resetPasswordExpires: Date,
-
     verified: {
       type: Boolean,
       default: false
     },
-
     verifyToken: {
       type: String,
       default: crypto.randomBytes(16).toString('hex')
