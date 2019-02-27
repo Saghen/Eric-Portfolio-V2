@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "Root/*": ["./"],
+      "Config/*": ["./config"],
+      "Core/*": ["./core/*"],
+      "Models/*": ["./models/*"],
+      "Routes/*": ["./routes/*"],
+      "Logger/*": ["./core/logger"],
+      "Constants": ["./core/constants"]
+    }
+  },
+  "exclude": ["node_modules"]
+}
