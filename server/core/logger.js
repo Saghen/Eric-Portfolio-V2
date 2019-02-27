@@ -66,7 +66,7 @@ let wrapper = {
   log(...args) { logger.log(args.join(" ")); },
   crit(...args) { logger.crit(args.join(" ")); },
   warn(...args) { logger.warn(args.join(" ")); },
-  spacer() { logger.info(); logger.info(chalk.green(`---------------------------`)); logger.info(); }
+  spacer() { logger.info(); }
 }
 
 
