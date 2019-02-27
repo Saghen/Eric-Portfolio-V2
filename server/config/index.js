@@ -17,6 +17,8 @@ module.exports = {
     https: process.env.HTTPS_PORT || 443,
   },
 
+  mode: process.env.NODE_ENV,
+
   rootPath: global.rootPath,
 
   uploadLimit: process.env.UPLOAD_LIMIT || 15 * 1024 * 1024, // 15MB
@@ -37,7 +39,8 @@ module.exports = {
     options: {
       user: process.env.MONGO_USERNAME || '',
       pass: process.env.MONGO_PASSWORD || '',
-      useNewUrlParser: true
+      useNewUrlParser: true,
+      useCreateIndex: true
     }
   },
 
