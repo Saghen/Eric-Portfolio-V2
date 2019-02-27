@@ -1,6 +1,6 @@
 'use strict';
 
-const C = require('../core/constants');
+const C = require('Constants');
 
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
