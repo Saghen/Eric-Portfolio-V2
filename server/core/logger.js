@@ -1,12 +1,14 @@
 'use strict';
 
-let winston = require('winston');
-let path = require('path');
-let fs = require('fs');
+const winston = require('winston');
+const path = require('path');
+const fs = require('fs');
 
-let config = require('../config');
+const config = require('Config');
 
-let transports = [];
+const chalk = require('chalk')
+
+const transports = [];
 
 /**
  * Console transporter
@@ -21,7 +23,9 @@ transports.push(new winston.transports.Console({
  * File Transporter
  */
 if (config.logging.file.enabled) {
-  let logDir = config.logging.file.path;
+  const fileConfig = config.logging.file;
+  const logDir = fileConfig.path;
+
   if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir);
   }
@@ -30,17 +34,17 @@ if (config.logging.file.enabled) {
     filename: path.join(logDir, 'error.log'),
     level: 'error',
     timestamp: true,
-    json: config.logging.file.json || false,
+    json: fileConfig.json || false,
     prettyPrint: true,
     humanReadableUnhandledException: true
   }))
 
-  if (config.logging.file.exceptionFile) {
+  if (fileConfig.exceptionFile) {
     transports.push(new winston.transports.File({
       filename: path.join(logDir, 'server.log'),
-      level: config.logging.file.level || 'info',
+      level: fileConfig.level || 'info',
       timestamp: true,
-      json: config.logging.file.json || false
+      json: fileConfig.json || false
     }))
   }
 }
@@ -61,7 +65,8 @@ let wrapper = {
   error(...args) { logger.error(args.join(" ")); },
   log(...args) { logger.log(args.join(" ")); },
   crit(...args) { logger.crit(args.join(" ")); },
-  warn(...args) { logger.warn(args.join(" ")); }
+  warn(...args) { logger.warn(args.join(" ")); },
+  spacer() { logger.info(); logger.info(chalk.green(`---------------------------`)); logger.info(); }
 }
 
 
