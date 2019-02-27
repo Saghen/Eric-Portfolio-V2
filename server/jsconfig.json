@@ -2,7 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "Root/*": ["./"],
+      "Root/*": ["./*"],
       "Config/*": ["./config"],
       "Core/*": ["./core/*"],
       "Models/*": ["./models/*"],
