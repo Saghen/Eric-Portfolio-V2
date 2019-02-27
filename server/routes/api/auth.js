@@ -11,6 +11,8 @@ const HttpStatus = require('http-status-codes');
 const RateLimit = require('koa2-ratelimit').RateLimit;
 const crypto = require('crypto');
 
+const mailer = require('Root/services/mailer');
+
 auth.prefix('/api/auth');
 
 auth.route({
@@ -38,8 +40,15 @@ auth.route({
       return;
     }
 
+    do {
+      token = crypto.randomBytes(16).toString('hex');
+    }
+    while(await User.findOne({ sessionToken: token }))
+
     await user.save();
+
     // send an email with the verification token 'verifyToken'
+    mailer.methods.sendVerification(user.email, user, ctx)
 
     ctx.body = {
       success: true,
@@ -58,16 +67,26 @@ auth.route({
       password: Joi.string().min(8).regex(/(.*[a-z].*)/).regex(/(.*[A-Z].*)/).regex(/(.*\d.*)/)
     }
   },
-  pre: errorHelper.middleware,
   handler: async ctx => {
+    if (!await errorHelper.verifyRoute(ctx)) return;
+
     const user = await User.findOne({ email: ctx.request.body.email });
 
     if (!user) return;
 
     if (!user.comparePassword(user.password)) return;
 
-    const token = crypto.randomBytes(64).toString('hex');
-    console.log(token);
+    let token;
+
+    do {
+      token = crypto.randomBytes(64).toString('hex');
+    }
+    while(await User.findOne({ sessionToken: token }))
+    
+    user.token = token;
+    user.save();
+
+    ctx.cookies.set('token', token, { httpOnly: true, secure: true, maxAge: 1000 * 60 * 60 * 24 * 60 })
   }
 })
 
