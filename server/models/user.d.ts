@@ -83,6 +83,4 @@ interface IUser extends Document {
 
 let UserModel: Model<IUser> = model<IUser>('User', UserSchema);
 
-
-
 export = UserModel;
