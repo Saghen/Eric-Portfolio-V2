@@ -36,7 +36,7 @@ auth.route({
 
     if (await User.findOne({ email: user.email })) {
       ctx.status = HttpStatus.CONFLICT;
-      ctx.body = errorHelper.build({ keys: 'email', status: HttpStatus.CONFLICT, description: 'A user with that email already exists' });
+      ctx.body = errorHelper.build({ ok: false, errors: [{ key: 'email', message: 'A user with that email already exists'}], status: HttpStatus.CONFLICT });
       return;
     }
 
