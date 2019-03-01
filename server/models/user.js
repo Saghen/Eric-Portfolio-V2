@@ -1,15 +1,11 @@
 'use strict';
 
-const C = require('../core/constants');
+const C = require('Constants');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt-nodejs');
 
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-
-let isEmpty = function (property) {
-  return property.length;
-};
 
 let validatePassword = function (password) {
   return password && password.length >= 8 && /(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+/.test(password);
@@ -65,7 +61,9 @@ let UserSchema = new Schema(
     verifyToken: {
       type: String,
       default: crypto.randomBytes(16).toString('hex')
-    }
+    },
+    sessionToken: String,
+    sessionExpires: Date
   }
 );
 
@@ -87,7 +85,7 @@ UserSchema.pre('save', function (next) {
 /**
  * Password compare
  */
-UserSchema.methods.comparePassword = function (password, cb) {
+UserSchema.methods.comparePassword = function (password) {
   return new Promise((resolve, reject) => {
     bcrypt.compare(password, this.password, function (err, isMatch) {
       if (err) reject(err);

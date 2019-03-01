@@ -1,7 +1,7 @@
 'use strict';
 
-let logger = require('./logger');
-let config = require('../config');
+let logger = require('Logger');
+let config = require('Config');
 
 let chalk = require('chalk');
 let mongoose = require('mongoose');
@@ -12,17 +12,17 @@ module.exports = function () {
   mongoose.Promise = global.Promise;
 
   if (mongoose.connection.readyState !== 1) {
-    logger.info('Connecting to Mongo ' + config.db.uri + '...');
-    db = mongoose.connect(config.db.uri, config.db.options, function mongoAfterConnect(err) {
+    logger.info(chalk.yellow.bold('Connecting to Mongo ' + config.db.uri + '...'));
+    db = mongoose.connect(config.db.uri, config.db.options, err => {
       if (err) {
         logger.error('Could not connect to MongoDB!');
         return logger.error(err);
       }
 
-      mongoose.set('debug', config.isDevMode());
+      mongoose.set('debug', config.mode === 'development');
     });
 
-    mongoose.connection.on('error', function mongoConnectionError(err) {
+    mongoose.connection.on('error', err => {
       if (err.message.code === 'ETIMEDOUT') {
         logger.warn('Mongo connection timeout!', err);
         setTimeout(() => {
@@ -35,12 +35,9 @@ module.exports = function () {
       return logger.error(err);
     });
 
-    mongoose.connection.once('open', function mongoAfterOpen() {
+    mongoose.connection.once('open', () => {
       logger.info(chalk.yellow.bold('Mongo DB connected.'));
-      logger.info('');
-      if (!config.isProduction) {
-        require('./seed-db')();
-      }
+      logger.spacer('');
     });
 
 
