@@ -2,13 +2,21 @@ const statusCodes = require('http').STATUS_CODES;
 const snakeCase = require('snake-case');
 
 module.exports = {
-  build: function({ status = 200, errors, ok, data }) {
+  build: function({ status = 200, ok = true, data, message }) {
     return {
       ok,
       name: statusCodes[status],
       status,
-      errors,
-      data
+      data,
+      message
+    };
+  },
+  buildError: function({ status = 400, errors = [{ key, message }] }) {
+    return {
+      ok: false,
+      name: statusCodes[status],
+      status,
+      errors
     };
   },
   verifyRoute: async function(ctx) {
@@ -32,6 +40,13 @@ module.exports = {
           key: err.path[0]
         };
       });
+
+    if (invalid.type && invalid.type.message) {
+      error.details = [{
+          message: error.message,
+          key: 'type'
+        }];
+    }
 
     ctx.body = {
       ok: false,
