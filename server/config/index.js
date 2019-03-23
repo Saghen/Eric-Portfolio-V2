@@ -2,7 +2,7 @@
 
 let path = require('path');
 
-global.rootPath = path.join(__dirname, '../');
+global.rootPath = path.join(__dirname);
 
 module.exports = {
   app: {
@@ -17,18 +17,14 @@ module.exports = {
     https: process.env.HTTPS_PORT || 443,
   },
 
-  mode: process.env.NODE_ENV,
+  mode: process.env.NODE_ENV || 'development',
 
   rootPath: global.rootPath,
 
   uploadLimit: process.env.UPLOAD_LIMIT || 15 * 1024 * 1024, // 15MB
 
-  sessions: {
-    cookie: {
-      maxAge: 14 * 24 * (60 * 60 * 1000), // 2 weeks
-      httpOnly: true,
-      secure: true
-    },
+  jwt: {
+    exp: 14 * 24 * (60 * 60 * 1000),
     secret: process.env.SESSION_SECRET || 'secretdoggo'
   },
 
