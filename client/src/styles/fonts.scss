@@ -1,0 +1,37 @@
+@font-face {
+  font-family: 'Netto OT';
+  src: url(/fonts/NettoOT.woff2) format('woff2'),
+    url(/fonts/NettoOT.woff) format('woff');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Letter Gothic Std';
+  src: url(/fonts/LetterGothicStd.woff2) format('woff2'),
+    url(/fonts/LetterGothicStd.woff) format('woff');
+  font-weight: 500;
+  font-style: normal;
+}
+:root {
+  --font-body: 'Letter Gothic Std', monospace;
+  --font-headline: 'Netto OT';
+  --util-ease: cubic-bezier(0.19, 1, 0.22, 1);
+}
+body,
+html {
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  color: #fff;
+  background: #000;
+  font-family: var(--font-body);
+  letter-spacing: 0.3rem;
+}
+button,
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-headline);
+}

@@ -1,0 +1,16 @@
+$serif: 'Roboto Slab', 'Times New Roman', Times, serif;
+$sans-serif: 'Helvetica', sans-serif;
+
+$primary: #2a967b;
+$text-primary: #fff;
+$width: 1200px;
+
+
+%anchor-reset {
+  color: $text-primary;
+  text-decoration: none;
+}
+
+%responsive-image {
+  width: 100%;
+}
