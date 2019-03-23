@@ -5,10 +5,6 @@ const config = require('Config/');
 const router = require('koa-joi-router');
 const Joi = router.Joi;
 
-<<<<<<< HEAD
-const C = require('../../core/constants');
-const Post = require('../../models/post');
-=======
 const C = require('Constants');
 const Post = require('Models/post');
 
@@ -17,7 +13,6 @@ const HttpStatus = require('http-status-codes');
 const RateLimit = require('koa2-ratelimit').RateLimit;
 
 const koaJwt = require('koa-jwt');
->>>>>>> 546f1dea3dd99077863e2aa34758a5f8d18be929
 
 const blog = router();
 
@@ -25,32 +20,6 @@ const mongoose = require('mongoose');
 
 blog.prefix('/api/blog');
 
-<<<<<<< HEAD
-blog.route({
-  method: 'get',
-  path: '/list',
-  validate: {
-    query: {
-      topic: Joi.string().only(...C.topics),
-      page: Joi.number().default(0),
-      pageCount: Joi.number().default(10)
-    },
-  },
-  async handler(ctx) {
-    let query = {
-      id: { $gt: ctx.query.page * ctx.query.pageCount, $lt: ctx.query.page * ctx.query.pageCount + ctx.query.pageCount - 1 }
-    }
-
-    if (ctx.query.topic) {
-      query.topic = ctx.query.topic;
-    }
-
-    let posts = await Post.find(query);
-
-    ctx.body = posts;
-  }
-})
-=======
 blog.get('/', ctx => {
   ctx.body = 'Yo';
 });
@@ -108,28 +77,12 @@ blog.route({
     ctx.body = reqHelper.build({ message: 'Successfully created blog post' });
   }
 });
->>>>>>> 546f1dea3dd99077863e2aa34758a5f8d18be929
 
 blog.route({
   method: 'get',
   path: '/list',
   validate: {
     query: {
-<<<<<<< HEAD
-      id: Joi.number().required()
-    }
-  },
-  async handler(ctx) {
-    let query = {
-      id: ctx.query.id
-    }
-
-    let post = await Post.findOne(query);
-
-    ctx.body = post;
-  }
-})
-=======
       maxitems: Joi.number().default(20),
       page: Joi.number().default(1)
     },
@@ -242,6 +195,5 @@ async function findPosts({ maxitems, page }) {
     .limit(maxitems)
     .populate('postedBy', ['fullname', 'lastName', 'firstName', 'roles', 'profileImage']);
 }
->>>>>>> 546f1dea3dd99077863e2aa34758a5f8d18be929
 
 module.exports = blog;
