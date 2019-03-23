@@ -2,11 +2,11 @@
 
 const winston = require('winston');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs-extra');
 
 const config = require('Config');
 
-const chalk = require('chalk')
+const chalk = require('chalk');
 
 const transports = [];
 
@@ -60,9 +60,10 @@ let logger = winston.createLogger({
 // Allows the logger to take multiple arguments and combine them together similar to python's print
 let wrapper = {
   ...logger,
+  debug(...args) { logger.debug(args.join(" ")); },
   info(...args) { logger.info(args.join(" ")); },
   verbose(...args) { logger.verbose(args.join(" ")); },
-  error(...args) { logger.error(args.join(" ")); },
+  error(...args) { logger.error(chalk.red(args.join(" "))); },
   log(...args) { logger.log(args.join(" ")); },
   crit(...args) { logger.crit(args.join(" ")); },
   warn(...args) { logger.warn(args.join(" ")); },

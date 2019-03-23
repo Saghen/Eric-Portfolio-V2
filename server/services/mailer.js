@@ -3,7 +3,7 @@
 let logger = require('Core/logger')
 let config = require('Config')
 let C = require('Core/constants')
-let fs = require('fs')
+let fs = require('fs-extra')
 let path = require('path')
 
 let nodemailer = require('nodemailer')
@@ -63,7 +63,7 @@ module.exports = {
       })
     },
     async sendVerification(recipients, user, ctx) {
-      let data = await fs.promises.readFile(
+      let data = await fs.readFile(
         path.resolve(__dirname, './mail/verification.html'),
         'utf8'
       )

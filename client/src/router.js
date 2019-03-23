@@ -1,8 +1,16 @@
 import Vue from 'vue'
 import Router from 'vue-router'
-import Home from './views/Home.vue'
 
-Vue.use(Router)
+import Blog from '@/views/blog/Blog.vue';
+import BlogHome from '@/views/blog/Home.vue';
+import BlogInsert from '@/views/blog/Insert.vue';
+import BlogPost from '@/views/blog/Post.vue';
+
+Vue.use(Router);
+
+function loadView(view) {
+  return () => import(/* webpackChunkName: "view-[request]" */ `@/views/${view}.vue`)
+}
 
 export default new Router({
   mode: 'history',
@@ -11,15 +19,25 @@ export default new Router({
     {
       path: '/',
       name: 'home',
-      component: Home
+      component: loadView('Home')
     },
     {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (about.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import(/* webpackChunkName: "about" */ './views/About.vue')
+      path: '/blog',
+      children: [
+        {
+          path: '/',
+          component: BlogHome
+        },
+        {
+          path: 'insert',
+          component: BlogInsert
+        },
+        {
+          path: 'post/:title',
+          component: BlogPost
+        }
+      ],
+      component: Blog
     }
   ]
 })

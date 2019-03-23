@@ -5,9 +5,10 @@
       "Root/*": ["./*"],
       "Config/*": ["./config"],
       "Core/*": ["./core/*"],
+      "Helpers/*": ["./helpers/*"],
       "Models/*": ["./models/*"],
       "Routes/*": ["./routes/*"],
-      "Logger/*": ["./core/logger"],
+      "Logger": ["./core/logger"],
       "Constants": ["./core/constants"]
     }
   },

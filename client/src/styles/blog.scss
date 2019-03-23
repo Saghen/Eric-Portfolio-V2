@@ -1,0 +1,19 @@
+@import url("https://fonts.googleapis.com/css?family=Roboto+Slab");
+
+@import "_globals.scss";
+
+body {
+  font-family: $serif;
+  scroll-behavior: smooth;
+}
+
+.button {
+  display: inline-block;
+  padding: 10px 40px;
+  color: #2a967b;
+  border: 1px solid #2a967b;
+  border-radius: 3px;
+  transition: all 0.4s;
+  cursor: pointer;
+  margin-top: 20px;
+}

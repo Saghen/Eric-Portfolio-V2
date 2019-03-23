@@ -53,19 +53,14 @@ let UserSchema = new Schema(
       default: [C.roles[1]]
     },
     resetPasswordToken: String,
-    resetPasswordExpires: Date,
-    verified: {
-      type: Boolean,
-      default: false
-    },
-    verifyToken: {
-      type: String,
-      default: crypto.randomBytes(16).toString('hex')
-    },
-    sessionToken: String,
-    sessionExpires: Date
-  }
+    resetPasswordExpires: Date
+  },
+  { toJSON: { virtuals: true } }
 );
+
+UserSchema.virtual('fullName').get(function () {
+  return `${this.firstName} ${this.lastName}`;
+})
 
 /**
  * Password hashing
