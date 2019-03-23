@@ -1,3 +1,7 @@
+'use strict'
+
+const config = require('Config/');
+
 const router = require('koa-joi-router');
 const Joi = router.Joi;
 
@@ -10,6 +14,7 @@ const reqHelper = require('Helpers/reqHelper');
 const HttpStatus = require('http-status-codes');
 const RateLimit = require('koa2-ratelimit').RateLimit;
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 const mailer = require('Root/services/mailer');
 
@@ -76,10 +81,12 @@ auth.route({
   handler: async ctx => {
     if (!(await reqHelper.verifyRoute(ctx))) return;
 
-    const user = await User.findOne({ email: ctx.request.body.email });
+    const body = ctx.request.body;
+
+    let user = await User.findOne({ email: body.email });
 
     if (!user) {
-      ctx.status = 400;
+      ctx.status = HttpStatus.NOT_FOUND;
       ctx.body = reqHelper.buildError({
         errors: [
           {
@@ -90,32 +97,37 @@ auth.route({
       });
     }
 
-    if (!user.comparePassword(user.password)) return;
-
-    let token;
-
-    do {
-      token = crypto.randomBytes(64).toString('hex');
-    } while (await User.findOne({ sessionToken: token }));
-
-    user.token = token;
-
-    try {
-      user.save();
-    } catch (err) {
-      console.error(err);
+    if (!(await user.comparePassword(body.password))) {
+      ctx.status = HttpStatus.FORBIDDEN;
+      ctx.body = reqHelper.buildError({
+        status: HttpStatus.FORBIDDEN,
+        errors: [{ key: 'password', message: 'The password is incorrect' }]
+      });
+      return;
     }
-    
 
-    ctx.cookies.set('token', token, {
-      httpOnly: true,
-      secure: true,
-      maxAge: 1000 * 60 * 60 * 24 * 60
-    });
+    // Remove the password and other sensitive data
+    user = {
+      ...user,
+      password: undefined,
+      resetPasswordToken: undefined,
+      resetPasswordExpires: undefined,
+      verified: undefined,
+      verifyToken: undefined
+    };
 
     ctx.body = reqHelper.build({
       message: 'Successfully logged in'
     });
+
+    // Add the token
+    const token = jwt.sign(user, config.jwt.secret, { expiresIn: config.jwt.exp });
+    ctx.cookies.token = token;
+
+    ctx.body = {
+      ...ctx.body,
+      token
+    }
   }
 });
 
@@ -134,7 +146,10 @@ auth.route({
 
     const query = ctx.request.query;
 
-    const user = await User.findOne({ email: query.email, verifyToken: query.token });
+    const user = await User.findOne({
+      email: query.email,
+      verifyToken: query.token
+    });
 
     if (!user) {
       ctx.status = 400;
