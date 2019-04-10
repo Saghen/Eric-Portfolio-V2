@@ -1,59 +1,50 @@
-'use strict'
+'use strict';
 
 const config = require('Config/');
 
-const router = require('koa-joi-router');
-const Joi = router.Joi;
-
-const auth = router();
+const Router = require('koa-joi-router');
+const Joi = Router.Joi;
 
 const User = require('Models/user');
-const db = require('Core/mongo');
 
 const reqHelper = require('Helpers/reqHelper');
 const HttpStatus = require('http-status-codes');
 const RateLimit = require('koa2-ratelimit').RateLimit;
-const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
 const mailer = require('Root/services/mailer');
 
-auth.prefix('/api/auth');
+const auth = Router({
+  errorHandler: reqHelper.routerErrorHandler
+});
+
+auth.prefix('/auth');
 
 auth.route({
   method: 'post',
   path: '/signup',
   // prettier-ignore
   validate: {
-    type: 'form',
+    type: ['json', 'form'],
     body: {
       firstName: Joi.string().trim().min(1).required(),
       lastName: Joi.string().trim().min(1).required(),
       email: Joi.string().trim().email().required(),
       password: Joi.string().min(8).regex(/(.*[a-z].*)/).regex(/(.*[A-Z].*)/).regex(/(.*\d.*)/).required(),
       profileImage: Joi.string().trim().lowercase()
-    },
-    continueOnError: true
+    }
   },
   handler: async ctx => {
-    if (!(await reqHelper.verifyRoute(ctx))) return;
-
     let user = new User(ctx.request.body);
 
     if (await User.findOne({ email: user.email })) {
-      ctx.status = HttpStatus.CONFLICT;
-      ctx.body = reqHelper.buildError({
+      return ctx.buildError({
         errors: [
           { key: 'email', message: 'A user with that email already exists' }
         ],
         status: HttpStatus.CONFLICT
       });
-      return;
     }
-
-    do {
-      token = crypto.randomBytes(16).toString('hex');
-    } while (await User.findOne({ sessionToken: token }));
 
     await user.save();
 
@@ -70,24 +61,25 @@ auth.route({
 auth.route({
   method: 'post',
   path: '/login',
+  pre: RateLimit.middleware({
+    interval: 1 * 60 * 1000, // 15 minutes
+    max: 10
+  }),
   // prettier-ignore
   validate: {
-    type: 'form',
+    type: 'json',
     body: {
       email: Joi.string().trim().email(),
       password: Joi.string().min(8).regex(/(.*[a-z].*)/).regex(/(.*[A-Z].*)/).regex(/(.*\d.*)/)
     }
   },
   handler: async ctx => {
-    if (!(await reqHelper.verifyRoute(ctx))) return;
-
     const body = ctx.request.body;
 
-    let user = await User.findOne({ email: body.email });
+    const user = await User.findOne({ email: body.email });
 
-    if (!user) {
-      ctx.status = HttpStatus.NOT_FOUND;
-      ctx.body = reqHelper.buildError({
+    if (!user)
+      return ctx.buildError({
         errors: [
           {
             key: 'email',
@@ -95,39 +87,24 @@ auth.route({
           }
         ]
       });
-    }
 
-    if (!(await user.comparePassword(body.password))) {
-      ctx.status = HttpStatus.FORBIDDEN;
-      ctx.body = reqHelper.buildError({
+    if (!(await user.comparePassword(body.password)))
+      return ctx.buildError({
         status: HttpStatus.FORBIDDEN,
         errors: [{ key: 'password', message: 'The password is incorrect' }]
       });
-      return;
-    }
-
-    // Remove the password and other sensitive data
-    user = {
-      ...user,
-      password: undefined,
-      resetPasswordToken: undefined,
-      resetPasswordExpires: undefined,
-      verified: undefined,
-      verifyToken: undefined
-    };
-
-    ctx.body = reqHelper.build({
-      message: 'Successfully logged in'
-    });
 
     // Add the token
-    const token = jwt.sign(user, config.jwt.secret, { expiresIn: config.jwt.exp });
-    ctx.cookies.token = token;
+    const token = jwt.sign({ email: user.email }, config.jwt.secret, {
+      expiresIn: config.jwt.exp
+    });
 
-    ctx.body = {
-      ...ctx.body,
-      token
-    }
+    ctx.cookies.set(config.jwt.cookie, token, config.jwt.cookieOptions);
+
+    ctx.build({
+      message: 'Successfully logged in',
+      data: { token }
+    });
   }
 });
 
@@ -142,8 +119,6 @@ auth.route({
     }
   },
   handler: async ctx => {
-    if (!(await reqHelper.verifyRoute(ctx))) return;
-
     const query = ctx.request.query;
 
     const user = await User.findOne({
@@ -152,8 +127,7 @@ auth.route({
     });
 
     if (!user) {
-      ctx.status = 400;
-      ctx.body = reqHelper.buildError({
+      return ctx.buildError({
         errors: [
           {
             key: 'token,email',
@@ -169,15 +143,12 @@ auth.route({
   }
 });
 
-auth.get('/resetPassword', async ctx => {
+auth.get('/password/reset', async ctx => {
   ctx.body = 'Yo';
 });
 
-auth.get('/changePassword', async ctx => {
+auth.get('/password/change', async ctx => {
   ctx.body = 'Yo';
 });
 
 module.exports = auth;
-
-// postedBy: Joi.string().regex(/^[a-f\d]{24}$/i).required(),
-// title: Joi.string().invalid()
