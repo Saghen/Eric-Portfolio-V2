@@ -1,35 +1,37 @@
-'use strict'
+'use strict';
 
 const config = require('Config/');
 
-const router = require('koa-joi-router');
-const Joi = router.Joi;
+const Router = require('koa-joi-router');
+const Joi = Router.Joi;
 
 const C = require('Constants');
 const Post = require('Models/post');
+const User = require('Models/user');
 
 const reqHelper = require('Helpers/reqHelper');
+const auth = require('Helpers/auth');
+
 const HttpStatus = require('http-status-codes');
-const RateLimit = require('koa2-ratelimit').RateLimit;
 
 const koaJwt = require('koa-jwt');
 
-const blog = router();
+const blog = Router({
+  errorHandler: reqHelper.routerErrorHandler
+});
 
 const mongoose = require('mongoose');
 
-blog.prefix('/api/blog');
+blog.prefix('/blog');
 
-blog.get('/', ctx => {
-  ctx.body = 'Yo';
-});
+//#region Insert Post
 
 blog.route({
-  method: 'post',
+  method: 'put',
   path: '/insert',
   // prettier-ignore
   validate: {
-    type: 'form',
+    type: 'json',
     body: {
       title: Joi.string().trim().min(1).max(120).required(),
       description: Joi.string().trim().min(1).max(400).required(),
@@ -37,46 +39,93 @@ blog.route({
       content: Joi.string().min(8).required(),
       topic: Joi.string().trim().only(...C.topics),
       date: Joi.date(),
-      postedBy: Joi.string().regex(/^[a-f\d]{24}$/i).required()
+      draft: Joi.boolean(),
+      hidden: Joi.boolean()
     },
-    maxBody: Number.POSITIVE_INFINITY,
-    continueOnError: true
+    maxBody: Number.POSITIVE_INFINITY
   },
-  pre: koaJwt({ secret: config.jwt.secret, cookie: 'token' }),
+  pre: auth.jwtMiddleware(),
   handler: async ctx => {
-    if (!(await reqHelper.verifyRoute(ctx))) return;
+    let user = await User.findOne({ email: ctx.state.user.email });
 
-    ctx.request.body.postedBy = mongoose.Types.ObjectId(
-      ctx.request.body.postedBy
-    );
+    if (!user) ctx.buildErr({
+      status: HttpStatus.NOT_FOUND,
+      errors: [{
+        key: 'token',
+        message: 'The logged in user was not found in the database'
+      }]
+    })
+
+    ctx.request.body.postedBy = user._id;
 
     let post = new Post(ctx.request.body);
 
-    if (
-      await Post.findOne({ title: post.title }).collation({
-        locale: 'en',
-        strength: 2
-      })
-    ) {
-      ctx.status = HttpStatus.CONFLICT;
-      ctx.body = reqHelper.buildError({
+    if (await findOnePost({ title: post.title })) {
+      return ctx.buildError({
         errors: [
           { key: 'title', message: 'A post with that title already exists' }
         ],
         status: HttpStatus.CONFLICT
       });
-      return;
     }
 
     try {
       await post.save();
     } catch (err) {
       logger.error(err.message);
+      throw Error('An error occured while saving a new post while inserting');
     }
 
-    ctx.body = reqHelper.build({ message: 'Successfully created blog post' });
+    ctx.build({ message: 'Successfully created blog post' });
   }
 });
+//#endregion
+//#region Update post
+blog.route({
+  method: 'patch',
+  path: '/update',
+  // prettier-ignore
+  validate: {
+    type: 'form',
+    body: {
+      id: Joi.number().min(1).required(),
+      title: Joi.string().trim().min(1).max(120),
+      description: Joi.string().trim().min(1).max(400),
+      image: Joi.string(),
+      content: Joi.string().min(8),
+      topic: Joi.string().trim().only(...C.topics),
+      date: Joi.date(),
+      postedBy: Joi.string().regex(/^[a-f\d]{24}$/i)
+    }
+  },
+  pre: auth.jwtMiddleware(),
+  handler: async ctx => {
+    const body = ctx.request.body;
+    if (body.postedBy) body.postedBy = mongoose.Types.ObjectId(body.postedBy);
+
+    if (await findOnePost({ id: body.id })) {
+      return ctx.buildError({
+        errors: [
+          { key: 'title', message: 'A post with that title already exists' }
+        ],
+        status: HttpStatus.CONFLICT
+      });
+    }
+
+    existingPost.update(body.postedBy);
+
+    try {
+      await post.save();
+    } catch (err) {
+      logger.error(err.message);
+      ctx.throw(500);
+    }
+
+    ctx.build({ message: 'Successfully created blog post' });
+  }
+});
+//#endregion
+//#region List posts
 
 blog.route({
   method: 'get',
@@ -85,17 +134,17 @@ blog.route({
     query: {
       maxitems: Joi.number().default(20),
       page: Joi.number().default(1)
-    },
-    continueOnError: true
+    }
   },
   handler: async ctx => {
-    if (!(await reqHelper.verifyRoute(ctx))) return;
-
     let posts = await findPosts(ctx.query);
 
-    ctx.body = reqHelper.build({ data: posts });
+    ctx.build({ data: posts });
   }
 });
+
+//#endregion
+//#region Get Post
 
 blog.route({
   method: 'get',
@@ -106,18 +155,13 @@ blog.route({
         id: Joi.number().min(1),
         title: Joi.string().min(1)
       })
-      .xor('id', 'title'),
-    continueOnError: true
+      .xor('id', 'title')
   },
   handler: async ctx => {
-    console.log(ctx.cookies.get('token'));
-    if (!(await reqHelper.verifyRoute(ctx))) return;
-
     let post = await findOnePost(ctx.query);
 
     if (post === undefined || post === null) {
-      ctx.status = HttpStatus.NOT_FOUND;
-      ctx.body = reqHelper.buildError({
+      return ctx.buildError({
         status: HttpStatus.NOT_FOUND,
         errors: [
           {
@@ -126,16 +170,18 @@ blog.route({
           }
         ]
       });
-      return;
     }
 
     post.views++;
 
-    ctx.body = reqHelper.build({ data: post });
+    ctx.build({ data: post });
 
     post.save();
   }
 });
+
+//#endregion
+//#region Delete Post
 
 blog.route({
   method: 'delete',
@@ -146,28 +192,34 @@ blog.route({
         id: Joi.number().min(1),
         title: Joi.string().min(1)
       })
-      .xor('id', 'title'),
-    continueOnError: true
+      .xor('id', 'title')
   },
   handler: async ctx => {
-    if (!(await reqHelper.verifyRoute(ctx))) return;
-
     let post = await findOnePost(ctx.query);
 
     if (post === undefined || post === null) {
-      ctx.status = HttpStatus.NOT_FOUND;
-      ctx.body = reqHelper.buildError({
+      return ctx.buildError({
         status: HttpStatus.NOT_FOUND,
         errors: [
           { key: 'index', message: 'The request blog post was not found' }
         ]
       });
-      return;
     }
 
     post.remove();
   }
 });
+
+//#endregion
+
+//#region Database Helpers
+const postedByProperties = [
+  'fullname',
+  'lastName',
+  'firstName',
+  'roles',
+  'profileImage'
+]
 
 async function findOnePost({ id, title }) {
   let post;
@@ -176,14 +228,14 @@ async function findOnePost({ id, title }) {
     post = await Post.findOne({
       _id: id,
       hidden: false
-    }).populate('postedBy');
+    }).populate('postedBy', postedByProperties);
   else if (title)
     post = await Post.findOne({
       title: title,
       hidden: false
     })
-      .collation({ locale: 'en', strength: 2 })
-      .populate('postedBy', ['fullname', 'lastName', 'firstName', 'roles', 'profileImage']); // Makes the query case insensitive
+      .collation({ locale: 'en', strength: 2 }) // Makes the query case insensitive
+      .populate('postedBy', postedByProperties);
 
   return post;
 }
@@ -193,7 +245,18 @@ async function findPosts({ maxitems, page }) {
     .sort({ _id: -1 })
     .skip((page - 1) * maxitems)
     .limit(maxitems)
-    .populate('postedBy', ['fullname', 'lastName', 'firstName', 'roles', 'profileImage']);
+    .populate('postedBy', postedByProperties);
 }
+//#endregion
+
+//#region Other Data
+blog.route({
+  method: 'get',
+  path: '/topics',
+  handler: async ctx => {
+    ctx.body = C.topics;
+  }
+});
+//#endregion
 
 module.exports = blog;
