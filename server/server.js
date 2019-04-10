@@ -1,82 +1,72 @@
-require('module-alias/register');
-require('dotenv').config();
-
-const Koa = require('koa');
-const app = new Koa();
-
-const send = require('koa-send');
+'use strict';
 
 const logger = require('Logger');
 const chalk = require('chalk');
 const config = require('Config');
 
-const path = require('path');
+module.exports = function(app) {
+  let http, https;
+  if (!config.env.isDevelopment()) {
+    https = generateHTTPSServer(app);
+  }
 
-app.use(require('koa-compress')());
+  if (config.env.isDevelopment()) http = generateHTTPServer(app);
+  else http = generateHTTPRedirect();
 
-if (config.mode == 'development') 
-  app.use(require('@koa/cors')());
+  return { http, https };
+};
 
-app.use(
-  require('koa-static')(path.join(__dirname, '../client/dist/'), {
-    maxage: 1000 * 60 * 5 // 5 minutes
-  })
-);
-require('Routes')(app);
-
-// 404
-app.use(async (ctx) => {
-  await send(ctx, 'index.html', { root: path.join(__dirname, '../client/dist/') });
-})
-
-
-const greenlock = require('greenlock').create({
-  version: 'draft-11',
-  server: 'https://acme-staging-v02.api.letsencrypt.org/directory',
-  email: config.app.contactEmail,
-  agreeTos: true,
-  approveDomains: [config.app.domain],
-  configDir: path.join(require('os').homedir(), 'acme/etc')
-  //, debug: true
-});
-
-const { staticServe } = require('fastify-auto-push');
-
-const https = require('spdy');
-
-greenlock
-  .register({
-    domains: [config.app.domain],
-    email: config.app.contactEmail,
+function generateHTTPSServer(app) {
+  const greenlock = require('greenlock-koa').create({
+    version: 'draft-11',
+    server: config.env.isDevelopment()
+      ? 'https://acme-staging-v02.api.letsencrypt.org/directory'
+      : 'https://acme-v02.api.letsencrypt.org/directory',
+    email: 'saghendev@gmail.com',
     agreeTos: true,
-    communityMember: true
-  })
-  .then(certs => {
-    const server = https.createServer(
-      {
-        key: certs.privkey,
-        cert: certs.cert + '\r\n' + certs.chain
-      },
-      app.callback()
-    );
-
-    server.listen(config.ports.https);
-
-    logger.info(
-      chalk.blue.bold(`Listening at https://saghen.com:${config.ports.https}`)
-    );
+    approveDomains: ['saghen.com'],
+    configDir: require('os').homedir() + '/acme/etc'
   });
 
+  // https server
+  const https = require('http2')
+    .createSecureServer(greenlock.tlsOptions, greenlock.middleware(app.callback()))
+    .listen(config.ports.https, function() {
+      logger.info(
+        chalk.blue.bold(
+          `Listening at https://${config.app.domain}:${config.ports.https} via https`
+        )
+      );
+    });
 
-// http redirect to https
-const redir = require('redirect-https')();
-const http = require('http');
-http.createServer(greenlock.middleware(redir)).listen(config.ports.http, () => {
-  logger.info(
-    chalk.blue.bold(
-      `Listening on port ${
-        config.ports.http
-      } to handle ACME http-01 challenge and redirect to https`
-    )
-  );
-});
+  return https;
+}
+
+function generateHTTPServer(app) {
+  const http = require('http')
+    .createServer(app.callback())
+    .listen(config.ports.http, () => {
+      logger.info(
+        chalk.blue.bold(
+          `Listening at http://${config.app.domain}:${config.ports.http} via http`
+        )
+      );
+    });
+
+  return http;
+}
+
+function generateHTTPRedirect() {
+  const redir = require('redirect-https');
+  const http = require('http')
+    .createServer(redir())
+    .listen(config.ports.http, () => {
+      logger.info(
+        chalk.blue.bold(
+          `Listening at ${config.app.domain}:${config.ports.http} via http`
+        )
+      );
+    });
+
+  return http;
+}
