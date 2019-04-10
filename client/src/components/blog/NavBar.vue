@@ -21,6 +21,9 @@
         <span id="header-title">Sea of Electrons</span>
       </router-link>
     </div>
+    <div>
+      <a class="header-link" @click.prevent="displayLogin()">Login</a>
+    </div>
   </header>
 </template>
 
@@ -30,6 +33,8 @@
 /* Header */
 
 header {
+  display: flex;
+  justify-content: space-between;
   position: fixed;
   width: 100vw;
   padding: 16px;
@@ -44,8 +49,11 @@ header {
     align-items: center;
     justify-content: space-between;
     max-width: $width;
-    margin: auto;
   }
+}
+
+.header-link {
+  color: #fff;
 }
 
 .block {
@@ -112,6 +120,11 @@ export default {
     },
     block() {
       return this.$store.state.navBarStuck;
+    }
+  },
+  methods: {
+    displayLogin() {
+      this.$modal.show('login')
     }
   }
 };
