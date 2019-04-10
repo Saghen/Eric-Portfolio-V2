@@ -6,8 +6,10 @@
 
 <style lang="scss">
 @import "normalize.css";
+@import '@/styles/_components.scss';
 </style>
 
 <script>
-export default {};
+export default {
+};
 </script>
