@@ -89,7 +89,7 @@ export default {
   props: ['data'],
   computed: {
     titleUrl() {
-      return this.data.title.split(' ').join('+')
+      return this.data.title;
     },
     relativeDate() {
       return timeAgo.format(new Date(this.data.date));
