@@ -1,7 +1,6 @@
 'use strict';
 
 const C = require('Constants');
-const crypto = require('crypto');
 const bcrypt = require('bcrypt-nodejs');
 
 const mongoose = require('mongoose');
@@ -42,15 +41,6 @@ let UserSchema = new Schema(
     profileImage: {
       type: String,
       default: 'placeholder.png' // use a folder called imgs/profiles/placeholder.png
-    },
-    roles: {
-      type: [
-        {
-          type: String,
-          enum: C.roles
-        }
-      ],
-      default: [C.roles[1]]
     },
     resetPasswordToken: String,
     resetPasswordExpires: Date
