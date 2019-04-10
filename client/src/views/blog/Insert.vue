@@ -1,71 +1,108 @@
 <template>
-  <div>
-    <ckeditor :editor="editor" v-model="editorData" :config="editorConfig"></ckeditor>
+  <div id="insert">
+    <image-manager></image-manager>
+    <post-editor v-model="post"></post-editor>
+    <a class="button" @click.prevent="submit()">Save Changes</a>
   </div>
 </template>
 
-
-<style lang="scss" scoped>
-@import '@/styles/_globals.scss';
-</style>
-
 <script>
-import CKEditor from '@ckeditor/ckeditor5-vue';
-import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import PostEditor from '@/components/blog/PostEditor.vue';
 
-// Plugins
-import Bold from '@ckeditor/ckeditor5-basic-styles/src/bold';
-import Italic from '@ckeditor/ckeditor5-basic-styles/src/italic';
-import Underline from '@ckeditor/ckeditor5-basic-styles/src/underline';
-import Strikethrough from '@ckeditor/ckeditor5-basic-styles/src/strikethrough';
-import Code from '@ckeditor/ckeditor5-basic-styles/src/code';
-import Subscript from '@ckeditor/ckeditor5-basic-styles/src/subscript';
-import Superscript from '@ckeditor/ckeditor5-basic-styles/src/superscript';
-
-import Highlight from '@ckeditor/ckeditor5-highlight/src/highlight';
-
-import Heading from '@ckeditor/ckeditor5-heading/src/heading';
-
-import Image from '@ckeditor/ckeditor5-image/src/image';
-import ImageToolbar from '@ckeditor/ckeditor5-image/src/imagetoolbar';
-import ImageCaption from '@ckeditor/ckeditor5-image/src/imagecaption';
-import ImageStyle from '@ckeditor/ckeditor5-image/src/imagestyle';
-
-import Link from '@ckeditor/ckeditor5-link/src/link';
+import ImageManager from '@/components/images/ImageManager.vue';
 
 export default {
   name: 'insert',
   components: {
-    ckeditor: CKEditor.component
+    PostEditor,
+    ImageManager
   },
   data() {
     return {
-      editor: ClassicEditor,
-      editorData: '<p>Content of the editor.</p>',
-      editorConfig: {
-        plugins: [
-          Bold,
-          Italic,
-          Underline,
-          Strikethrough,
-          Code,
-          Subscript,
-          Superscript,
-          Highlight,
-          Heading,
-          Image,
-          ImageToolbar,
-          ImageCaption,
-          Link
-        ]
-      }
+      post: {
+        id: undefined,
+        title: '',
+        description: '',
+        image: '',
+        content: '',
+        topic: '',
+        draft: true,
+        hidden: false
+      },
+      saved: false
     };
   },
   created() {
     this.$store.commit('changeStuck', true);
+    this.$store.commit('changeTheme', 'dark');
+
+    this.$http.get('/');
   },
   destroyed() {
     this.$store.commit('changeStuck', false);
+    this.$store.commit('changeTheme', 'light');
+  },
+  watch: {
+    post: {
+      handler: function(post) {},
+      deep: true
+    }
+  },
+  methods: {
+    sendToast(text) {
+      this.$toasted.show(text, {
+        type: 'success'
+      });
+    },
+
+    sendError(text) {
+      this.$toasted.show(text, {
+        type: 'error'
+      });
+    },
+
+    submit() {
+      let request;
+      if (this.saved) request = this.updatePost(post);
+      else request = this.insertPost();
+
+      request.catch(err => {
+          console.error(err.response);
+          if (err.response.status === 401)
+            this.sendError('Please login to submit');
+          else this.sendError(err.response.data.errors[0].message);
+        });
+    },
+
+    insertPost() {
+      return this.$http
+        .put('/api/blog/insert', this.post)
+        .then(({ data }) => {
+          this.post.id = data.id;
+          this.sendToast('Successfully uploaded');
+        })
+    },
+
+    updatePost(post) {
+      return this.$http
+        .update('/api/blog/update', post)
+        .then(() => this.sendToast('All changes saved.'))
+    }
   }
 };
 </script>
+
+<style lang="scss" scoped>
+@import '@/styles/_globals.scss';
+
+#insert {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 16px;
+}
+
+.button {
+  margin: 16px auto;
+}
+</style>
