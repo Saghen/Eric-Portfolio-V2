@@ -59,3 +59,9 @@ typings/
 
 # next.js build output
 .next
+
+# Ignore images
+gulp-images/images/
+
+# Ignore package-locks
+package-lock.json
