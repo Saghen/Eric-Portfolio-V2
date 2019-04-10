@@ -1,4 +1,4 @@
 module.exports = {
   roles: [ 'guest', 'user', 'author'],
-  topics: [ 'general', 'programming', '' ]
+  topics: [ 'general', 'programming' ]
 };
