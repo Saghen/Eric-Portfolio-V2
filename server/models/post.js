@@ -56,6 +56,10 @@ let PostSchema = new Schema({
     type: Boolean,
     default: false
   },
+  draft: {
+    type: Boolean,
+    default: true
+  },
   views: {
     type: Number,
     default: 0
