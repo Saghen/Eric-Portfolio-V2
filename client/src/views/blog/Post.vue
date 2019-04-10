@@ -22,7 +22,7 @@
   </div>
 </template>
 
-<style lang="scss">
+<style lang="scss" scoped>
 @import '@/styles/_globals.scss';
 
 #post {
@@ -126,9 +126,10 @@ export default {
     this.$store.commit('changeTheme', 'dark');
 
     axios(
-      `/api/blog/get?title=${this.$route.params.title.split('+').join(' ')}`
+      `/api/blog/get?title=${this.$route.params.title}`
     ).then(({ data }) => {
       Object.assign(this, data.data);
+      document.title = this.title;
     });
   },
   data() {
