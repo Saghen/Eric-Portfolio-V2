@@ -62,8 +62,6 @@
 </style>
 
 <script>
-import axios from '@/axios';
-
 import BlogCard from '@/components/blog/Card.vue';
 import Pagination from '@/components/blog/Pagination.vue';
 
@@ -74,7 +72,7 @@ export default {
   created() {
     this.$store.commit('changeTheme', 'light');
 
-    axios(`/api/blog/list?maxitems=${999}`).then(res => {
+    this.$http.get(`/api/blog/list?maxitems=${999}`).then(res => {
       const data = res.data.data;
       for (let i = 0; i < data.length; i++) {
         data[i].dark = i % 2 == 1;
