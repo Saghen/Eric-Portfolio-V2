@@ -13,9 +13,6 @@ const reqHelper = require('Helpers/reqHelper');
 const auth = require('Helpers/auth');
 
 const HttpStatus = require('http-status-codes');
-
-const koaJwt = require('koa-jwt');
-
 const blog = Router({
   errorHandler: reqHelper.routerErrorHandler
 });
@@ -48,13 +45,16 @@ blog.route({
   handler: async ctx => {
     let user = await User.findOne({ email: ctx.state.user.email });
 
-    if (!user) ctx.buildErr({
-      status: HttpStatus.NOT_FOUND,
-      errors: [{
-        key: 'token',
-        message: 'The logged in user was not found in the database'
-      }]
-    })
+    if (!user)
+      ctx.buildErr({
+        status: HttpStatus.NOT_FOUND,
+        errors: [
+          {
+            key: 'token',
+            message: 'The logged in user was not found in the database'
+          }
+        ]
+      });
 
     ctx.request.body.postedBy = user._id;
 
@@ -133,11 +133,34 @@ blog.route({
   validate: {
     query: {
       maxitems: Joi.number().default(20),
-      page: Joi.number().default(1)
+      page: Joi.number().default(1),
+      draft: Joi.boolean().default(false),
+      hidden: Joi.boolean().default(false)
     }
   },
+  pre: auth.jwtMiddlewareContinue(),
   handler: async ctx => {
-    let posts = await findPosts(ctx.query);
+    let queryOpts = { maxItems: ctx.query.maxItems, page: ctx.query.page };
+
+    let posts;
+
+    if (ctx.query.draft || ctx.query.hidden) {
+      if (!ctx.state.user)
+        return ctx.buildErr({
+          status: HttpStatus.FORBIDDEN,
+          errors: [
+            {
+              key: 'cookie-token',
+              message: 'You are not logged in'
+            }
+          ]
+        });
+
+      queryOpts.draft = ctx.query.draft;
+      queryOpts.hidden = ctx.query.hidden;
+    } 
+    
+    posts = await findPosts(queryOpts);
 
     ctx.build({ data: posts });
   }
@@ -219,20 +242,20 @@ const postedByProperties = [
   'firstName',
   'roles',
   'profileImage'
-]
+];
 
-async function findOnePost({ id, title }) {
+async function findOnePost({ id, title, draft = false }) {
   let post;
 
   if (id)
     post = await Post.findOne({
       _id: id,
-      hidden: false
+      draft
     }).populate('postedBy', postedByProperties);
   else if (title)
     post = await Post.findOne({
       title: title,
-      hidden: false
+      draft
     })
       .collation({ locale: 'en', strength: 2 }) // Makes the query case insensitive
       .populate('postedBy', postedByProperties);
@@ -240,8 +263,8 @@ async function findOnePost({ id, title }) {
   return post;
 }
 
-async function findPosts({ maxitems, page }) {
-  return await Post.find({ hidden: false })
+async function findPosts({ maxitems = 20, page = 20,draft = false }) {
+  return await Post.find({ draft })
     .sort({ _id: -1 })
     .skip((page - 1) * maxitems)
     .limit(maxitems)
