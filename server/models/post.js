@@ -17,14 +17,14 @@ let PostSchema = new Schema({
     type: String,
     required: true,
     minLength: 1,
-    maxLength: 120,
+    maxLength: 240,
     validate: [isEmpty, 'Please fill in the title']
   },
   description: {
     type: String,
     required: true,
     minLength: 1,
-    maxLength: 400,
+    maxLength: 800,
     validate: [isEmpty, 'Please fill in the description']
   },
   image: {

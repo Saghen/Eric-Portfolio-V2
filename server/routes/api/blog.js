@@ -30,8 +30,8 @@ blog.route({
   validate: {
     type: 'json',
     body: {
-      title: Joi.string().trim().min(1).max(120).required(),
-      description: Joi.string().trim().min(1).max(400).required(),
+      title: Joi.string().trim().min(1).max(240).required(),
+      description: Joi.string().trim().min(1).max(800).required(),
       image: Joi.string().required(),
       content: Joi.string().min(8).required(),
       topic: Joi.string().trim().only(...C.topics),
@@ -134,30 +134,26 @@ blog.route({
     query: {
       maxitems: Joi.number().default(20),
       page: Joi.number().default(1),
-      draft: Joi.boolean().default(false),
-      hidden: Joi.boolean().default(false)
+      draft: Joi.boolean().default(false)
     }
   },
   pre: auth.jwtMiddlewareContinue(),
   handler: async ctx => {
-    let queryOpts = { maxItems: ctx.query.maxItems, page: ctx.query.page };
+    let queryOpts = { maxItems: ctx.query.maxItems, page: ctx.query.page, draft: ctx.query.draft };
 
     let posts;
 
-    if (ctx.query.draft || ctx.query.hidden) {
+    if (queryOpts.draft) {
       if (!ctx.state.user)
         return ctx.buildErr({
           status: HttpStatus.FORBIDDEN,
           errors: [
             {
-              key: 'cookie-token',
+              key: 'token',
               message: 'You are not logged in'
             }
           ]
         });
-
-      queryOpts.draft = ctx.query.draft;
-      queryOpts.hidden = ctx.query.hidden;
     } 
     
     posts = await findPosts(queryOpts);
@@ -176,12 +172,30 @@ blog.route({
     query: Joi.object()
       .keys({
         id: Joi.number().min(1),
-        title: Joi.string().min(1)
+        title: Joi.string().min(1),
+        draft: Joi.boolean().default(false)
       })
       .xor('id', 'title')
   },
   handler: async ctx => {
-    let post = await findOnePost(ctx.query);
+    let queryOpts = { id: ctx.query.id, title: ctx.query.title, draft: ctx.query.draft };
+
+    let post;
+
+    if (queryOpts.draft) {
+      if (!ctx.state.user)
+        return ctx.buildErr({
+          status: HttpStatus.FORBIDDEN,
+          errors: [
+            {
+              key: 'token',
+              message: 'You are not logged in'
+            }
+          ]
+        });
+    } 
+
+    post = await findOnePost(ctx.query);
 
     if (post === undefined || post === null) {
       return ctx.buildError({
