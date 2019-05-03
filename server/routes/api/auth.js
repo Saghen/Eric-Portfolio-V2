@@ -14,13 +14,15 @@ const jwt = require('jsonwebtoken');
 
 const mailer = require('Root/services/mailer');
 
-const auth = Router({
+const auth = require('Helpers/auth');
+
+const router = Router({
   errorHandler: reqHelper.routerErrorHandler
 });
 
-auth.prefix('/auth');
+router.prefix('/auth');
 
-auth.route({
+router.route({
   method: 'post',
   path: '/signup',
   // prettier-ignore
@@ -48,17 +50,13 @@ auth.route({
 
     await user.save();
 
-    // send an email with the verification token 'verifyToken'
-    mailer.methods.sendVerification(user.email, user, ctx);
-
-    ctx.body = {
-      success: true,
-      message: 'Successfully created account'
-    };
+    ctx.build({
+      message: 'Successfully added account'
+    });
   }
 });
 
-auth.route({
+router.route({
   method: 'post',
   path: '/login',
   pre: RateLimit.middleware({
@@ -108,47 +106,30 @@ auth.route({
   }
 });
 
-auth.route({
+router.route({
   method: 'get',
-  path: '/verify',
-  // prettier-ignore
+  path: '/get',
+  //prettier-ignore
   validate: {
-    query: {
-      email: Joi.string().email().required(),
-      token: Joi.string().length(32).required()
-    }
+    query: Joi.object({
+      self: Joi.boolean(),
+      email: Joi.string().email()
+    }).xor('self', 'email')
   },
-  handler: async ctx => {
-    const query = ctx.request.query;
-
-    const user = await User.findOne({
-      email: query.email,
-      verifyToken: query.token
-    });
-
-    if (!user) {
-      return ctx.buildError({
-        errors: [
-          {
-            key: 'token,email',
-            message: 'The provided email or token is not associated with a user'
-          }
-        ]
-      });
+  pre: auth.jwtMiddlewareContinue(),
+  handler: ctx => {
+    const query = ctx.query
+    if (query.self) {
+      if (typeof ctx.state.user !== 'object')
+        ctx.buildError({
+          status: HttpStatus.FORBIDDEN,
+          errors: [{
+            key: 'token',
+            message: 'Please login to continue'
+          }]
+        }) 
     }
-
-    user.verified = true;
-
-    user.save();
   }
-});
+})
 
-auth.get('/password/reset', async ctx => {
-  ctx.body = 'Yo';
-});
-
-auth.get('/password/change', async ctx => {
-  ctx.body = 'Yo';
-});
-
-module.exports = auth;
+module.exports = router;

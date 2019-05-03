@@ -8,7 +8,7 @@
       </svg>
     </button>
     <span>{{ value }}</span>
-    <button :class="{'pagination-inactive': value >= maxPages}" v-on:click="increase();">
+    <button :class="{'pagination-inactive': value >= maxPage}" v-on:click="increase();">
       <svg viewBox="0 0 448 512">
         <path
           d="M190.5 66.9l22.2-22.2c9.4-9.4 24.6-9.4 33.9 0L441 239c9.4 9.4 9.4 24.6 0 33.9L246.6 467.3c-9.4 9.4-24.6 9.4-33.9 0l-22.2-22.2c-9.5-9.5-9.3-25 .4-34.3L311.4 296H24c-13.3 0-24-10.7-24-24v-32c0-13.3 10.7-24 24-24h287.4L190.9 101.2c-9.8-9.3-10-24.8-.4-34.3z"
@@ -23,6 +23,7 @@
 
 .pagination {
   margin: 20px auto;
+  text-align: center;
 
   * {
     margin: 0 5px;
@@ -52,7 +53,9 @@
 
   button:hover:not(.pagination-inactive) {
     background: #000;
-    fill: #fff;
+    > svg > path {
+      fill: #fff;
+    }
   }
 }
 </style>
@@ -62,12 +65,12 @@
 export default {
   name: 'pagination',
   props: {
-    maxPages: Number,
+    maxPage: Number,
     value: Number
   },
   methods: {
     increase(val = 1) {
-      if (this.value + val <= this.maxPages)
+      if (this.value + val <= this.maxPage)
         this.$emit('input', this.value + val);
     },
     decrease(val = 1) {

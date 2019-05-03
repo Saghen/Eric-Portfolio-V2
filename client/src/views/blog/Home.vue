@@ -10,11 +10,53 @@
       </div>
     </div>
     <div id="card-container">
-      <blog-card v-for="(card, i) in visibleBlogData" :key="i" :data="card"></blog-card>
-      <pagination v-model="page" :maxPages="maxPages"></pagination>
+      <blog-card v-for="(card, i) in posts" :key="i" :dark="i % 2 == 1" :data="card"></blog-card>
+      <pagination v-model="page" :maxPage="maxPage"></pagination>
     </div>
   </div>
 </template>
+
+<script>
+import BlogCard from '@/components/blog/Card.vue';
+import Pagination from '@/components/blog/Pagination.vue';
+
+export default {
+  data() {
+    return {
+      posts: [],
+      page: +this.$route.query.page || 1,
+      countPerPage: 10,
+      maxPage: 1
+    };
+  },
+  created() {
+    this.updatePosts();
+  },
+  watch: {
+    page() {
+      this.$router.replace({ query: { page: this.page } });
+      
+      this.updatePosts();
+    }
+  },
+  methods: {
+    updatePosts() {
+      this.$http
+        .get(`/api/blog/list?page=${this.page}&maxitems=${this.countPerPage}`)
+        .then(res => {
+          const data = res.data.data;
+          this.maxPage = Math.ceil(data.count / this.countPerPage);
+
+          this.posts = data.posts;
+        });
+    }
+  },
+  components: {
+    BlogCard,
+    Pagination
+  }
+};
+</script>
 
 <style lang="scss" scoped>
 @import '@/styles/_globals.scss';
@@ -60,58 +102,3 @@
   max-width: $width;
 }
 </style>
-
-<script>
-import BlogCard from '@/components/blog/Card.vue';
-import Pagination from '@/components/blog/Pagination.vue';
-
-const countPerPage = 20;
-
-export default {
-  name: 'Home',
-  created() {
-    this.$store.commit('changeTheme', 'light');
-
-    this.$http.get(`/api/blog/list?maxitems=${999}`).then(res => {
-      const data = res.data.data;
-      for (let i = 0; i < data.length; i++) {
-        data[i].dark = i % 2 == 1;
-      }
-      this.blogData = data;
-    });
-  },
-  data() {
-    return {
-      blogData: [],
-      page: +this.$route.query.page || 1,
-      countPerPage: 6
-    };
-  },
-  computed: {
-    visibleBlogData() {
-      const newData = [];
-      const offset = (this.page - 1) * this.countPerPage;
-
-      for (let i = 0; i < Math.min(this.countPerPage, this.blogData.length - offset); i++) {
-        newData.push(this.blogData[i + offset]);
-      }
-
-      return newData;
-    },
-    maxPages() {
-      console.log(this.blogData);
-      return Math.ceil(this.blogData.length / this.countPerPage)
-    }
-  },
-  watch: {
-    page() {
-      this.$router.replace({query: {page: this.page}})
-    }
-  },
-  components: {
-    'blog-card': BlogCard,
-    pagination: Pagination
-  }
-};
-</script>
-

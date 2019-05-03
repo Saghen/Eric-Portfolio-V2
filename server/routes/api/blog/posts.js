@@ -13,17 +13,15 @@ const reqHelper = require('Helpers/reqHelper');
 const auth = require('Helpers/auth');
 
 const HttpStatus = require('http-status-codes');
-const blog = Router({
+const posts = Router({
   errorHandler: reqHelper.routerErrorHandler
 });
 
 const mongoose = require('mongoose');
 
-blog.prefix('/blog');
-
 //#region Insert Post
 
-blog.route({
+posts.route({
   method: 'put',
   path: '/insert',
   // prettier-ignore
@@ -34,10 +32,9 @@ blog.route({
       description: Joi.string().trim().min(1).max(800).required(),
       image: Joi.string().required(),
       content: Joi.string().min(8).required(),
-      topic: Joi.string().trim().only(...C.topics),
-      date: Joi.date(),
-      draft: Joi.boolean(),
-      hidden: Joi.boolean()
+      topic: Joi.string().regex(/^[a-f\d]{24}$/i).required(),
+      date: Joi.date().default(new Date()),
+      draft: Joi.boolean()
     },
     maxBody: Number.POSITIVE_INFINITY
   },
@@ -46,7 +43,7 @@ blog.route({
     let user = await User.findOne({ email: ctx.state.user.email });
 
     if (!user)
-      ctx.buildErr({
+      ctx.buildError({
         status: HttpStatus.NOT_FOUND,
         errors: [
           {
@@ -81,20 +78,22 @@ blog.route({
 });
 //#endregion
 //#region Update post
-blog.route({
+
+posts.route({
   method: 'patch',
   path: '/update',
   // prettier-ignore
   validate: {
-    type: 'form',
+    type: ['json', 'form'],
     body: {
-      id: Joi.number().min(1).required(),
+      id: Joi.string().regex(/^[a-f\d]{24}$/i).required(),
       title: Joi.string().trim().min(1).max(120),
       description: Joi.string().trim().min(1).max(400),
       image: Joi.string(),
       content: Joi.string().min(8),
-      topic: Joi.string().trim().only(...C.topics),
+      topic: Joi.string().regex(/^[a-f\d]{24}$/i),
       date: Joi.date(),
+      draft: Joi.boolean(),
       postedBy: Joi.string().regex(/^[a-f\d]{24}$/i)
     }
   },
@@ -103,31 +102,39 @@ blog.route({
     const body = ctx.request.body;
     if (body.postedBy) body.postedBy = mongoose.Types.ObjectId(body.postedBy);
 
-    if (await findOnePost({ id: body.id })) {
+    let changes = {
+      ...body
+    };
+
+    delete changes.id;
+
+    let existingPost = await findOnePostAny({ id: body.id });
+
+    if (!existingPost) {
       return ctx.buildError({
-        errors: [
-          { key: 'title', message: 'A post with that title already exists' }
-        ],
-        status: HttpStatus.CONFLICT
+        errors: [{ key: 'id', message: 'A post with that id does not exist' }],
+        status: HttpStatus.NOT_FOUND
       });
     }
 
-    existingPost.update(body.postedBy);
+    if (existingPost.draft == true && body.draft == false) {
+      body.date = new Date();
+    }
 
     try {
-      await post.save();
+      await Post.updateOne({ _id: body.id }, body);
     } catch (err) {
       logger.error(err.message);
       ctx.throw(500);
     }
 
-    ctx.build({ message: 'Successfully created blog post' });
+    ctx.build({ message: 'Successfully updated blog post' });
   }
 });
 //#endregion
 //#region List posts
 
-blog.route({
+posts.route({
   method: 'get',
   path: '/list',
   validate: {
@@ -139,13 +146,13 @@ blog.route({
   },
   pre: auth.jwtMiddlewareContinue(),
   handler: async ctx => {
-    let queryOpts = { maxItems: ctx.query.maxItems, page: ctx.query.page, draft: ctx.query.draft };
+    let query = ctx.query;
 
     let posts;
 
-    if (queryOpts.draft) {
+    if (query.draft) {
       if (!ctx.state.user)
-        return ctx.buildErr({
+        return ctx.buildError({
           status: HttpStatus.FORBIDDEN,
           errors: [
             {
@@ -154,48 +161,52 @@ blog.route({
             }
           ]
         });
-    } 
-    
-    posts = await findPosts(queryOpts);
+    }
 
-    ctx.build({ data: posts });
+    posts = await findPosts(query);
+
+    let count = await countPosts(query);
+
+    ctx.build({
+      data: {
+        posts,
+        count
+      }
+    });
   }
 });
 
 //#endregion
 //#region Get Post
 
-blog.route({
+posts.route({
   method: 'get',
   path: '/get',
   validate: {
     query: Joi.object()
       .keys({
-        id: Joi.number().min(1),
+        id: Joi.string().regex(/^[a-f\d]{24}$/i),
         title: Joi.string().min(1),
         draft: Joi.boolean().default(false)
       })
       .xor('id', 'title')
   },
+  pre: auth.jwtMiddlewareContinue(),
   handler: async ctx => {
-    let queryOpts = { id: ctx.query.id, title: ctx.query.title, draft: ctx.query.draft };
+    
+    let query = {
+      id: ctx.query.id,
+      title: ctx.query.title
+    };
 
     let post;
 
-    if (queryOpts.draft) {
-      if (!ctx.state.user)
-        return ctx.buildErr({
-          status: HttpStatus.FORBIDDEN,
-          errors: [
-            {
-              key: 'token',
-              message: 'You are not logged in'
-            }
-          ]
-        });
-    } 
+    console.time('yuh')
 
-    post = await findOnePost(ctx.query);
+    if (ctx.state.user) post = await findOnePostAny(query);
+    else post = await findOnePost(query);
+
+    console.timeEnd('yuh')
 
     if (post === undefined || post === null) {
       return ctx.buildError({
@@ -209,24 +220,20 @@ blog.route({
       });
     }
 
-    post.views++;
-
     ctx.build({ data: post });
-
-    post.save();
   }
 });
 
 //#endregion
 //#region Delete Post
 
-blog.route({
+posts.route({
   method: 'delete',
   path: '/delete',
   validate: {
     query: Joi.object()
       .keys({
-        id: Joi.number().min(1),
+        id: Joi.string().regex(/^[a-f\d]{24}$/i),
         title: Joi.string().min(1)
       })
       .xor('id', 'title')
@@ -265,35 +272,54 @@ async function findOnePost({ id, title, draft = false }) {
     post = await Post.findOne({
       _id: id,
       draft
-    }).populate('postedBy', postedByProperties);
+    })
+      .populate('postedBy', postedByProperties)
+      .populate('topic');
   else if (title)
     post = await Post.findOne({
       title: title,
       draft
     })
       .collation({ locale: 'en', strength: 2 }) // Makes the query case insensitive
-      .populate('postedBy', postedByProperties);
+      .populate('postedBy', postedByProperties)
+      .populate('topic');
 
   return post;
 }
 
-async function findPosts({ maxitems = 20, page = 20,draft = false }) {
+async function findOnePostAny({ id, title }) {
+  let post;
+
+  if (id)
+    post = await Post.findOne({
+      _id: id
+    })
+      .collation({ locale: 'en', strength: 2 }) // Makes the query case insensitive
+      .populate('postedBy', postedByProperties)
+      .populate('topic');
+  else if (title)
+    post = await Post.findOne({
+      title: title
+    })
+      .collation({ locale: 'en', strength: 2 }) // Makes the query case insensitive
+      .populate('postedBy', postedByProperties)
+      .populate('topic');
+
+  return post;
+}
+
+async function findPosts({ maxitems = 20, page = 20, draft = false }) {
   return await Post.find({ draft })
     .sort({ _id: -1 })
     .skip((page - 1) * maxitems)
     .limit(maxitems)
-    .populate('postedBy', postedByProperties);
+    .populate('postedBy', postedByProperties)
+    .populate('topic');
+}
+
+async function countPosts({ draft = false }) {
+  return await Post.count({ draft });
 }
 //#endregion
 
-//#region Other Data
-blog.route({
-  method: 'get',
-  path: '/topics',
-  handler: async ctx => {
-    ctx.body = C.topics;
-  }
-});
-//#endregion
-
-module.exports = blog;
+module.exports = posts;

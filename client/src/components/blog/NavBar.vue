@@ -1,6 +1,17 @@
 <template>
   <header ref="header" :class="{ dark: theme == 'dark', block }">
     <div>
+      <div
+        id="side-nav-hamburger"
+        class="hamburger hamburger--slider"
+        :class="{ 'is-active': sideNavOpen, dark: theme == 'dark' }"
+        v-if="sideNavExists"
+        @click="sideNavOpen = !sideNavOpen"
+      >
+        <span class="hamburger-box">
+          <span class="hamburger-inner"></span>
+        </span>
+      </div>
       <router-link to="/blog/" id="header-logo">
         <svg viewBox="0 0 105 95">
           <g>
@@ -37,7 +48,8 @@ header {
   justify-content: space-between;
   position: fixed;
   width: 100vw;
-  padding: 16px;
+  height: $navBarHeight;
+  padding: 0 32px;
   box-sizing: border-box;
   transition: background 0.2s;
   letter-spacing: 0.1em;
@@ -49,6 +61,25 @@ header {
     align-items: center;
     justify-content: space-between;
     max-width: $width;
+  }
+
+  &.scrolled-header,
+  &.dark {
+    background-color: #fff !important;
+    color: #000;
+    box-shadow: 0 0 10px 0px #aaa;
+
+    path {
+      fill: #222 !important;
+    }
+
+    a {
+      color: #000 !important;
+    }
+
+    nav a:hover {
+      color: #666 !important;
+    }
   }
 }
 
@@ -78,21 +109,18 @@ header {
   }
 }
 
-.scrolled-header, .dark {
-  background-color: #fff !important;
-  color: #000;
-  box-shadow: 0 0 10px 0 #aaa;
+@import '@/styles/hamburger.scss';
 
-  path {
-    fill: #222 !important;
-  }
-
-  a {
-    color: #000 !important;
-  }
-
-  nav a:hover {
-    color: #666 !important;
+#side-nav-hamburger {
+  display: none;
+  cursor: pointer;
+  transform: scale(0.7);
+  margin: auto 10px auto 0;
+  padding: 0 0 0 30px;
+}
+@media screen and (max-width: 1000px) {
+  #side-nav-hamburger {
+    display: block;
   }
 }
 </style>
@@ -120,11 +148,22 @@ export default {
     },
     block() {
       return this.$store.state.navBarStuck;
+    },
+    sideNavOpen: {
+      get() {
+        return this.$store.state.sideNav.open;
+      },
+      set(val) {
+        this.$store.commit('changeSideNavOpen', val);
+      }
+    },
+    sideNavExists() {
+      return this.$store.state.sideNav.exists;
     }
   },
   methods: {
     displayLogin() {
-      this.$modal.show('login')
+      this.$modal.show('login');
     }
   }
 };

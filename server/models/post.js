@@ -5,8 +5,6 @@ const C = require('Constants');
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-const { MongooseAutoIncrementID } = require('mongoose-auto-increment-reworked');
-
 let isEmpty = function(property) {
   return property.length;
 };
@@ -39,30 +37,20 @@ let PostSchema = new Schema({
     trim: true,
     validate: [isEmpty, 'Please fill in the content']
   },
-  topic: {
-    type: String,
-    enum: C.topics,
-    default: C.topics[0]
-  },
+  topic: { type: mongoose.Schema.Types.ObjectId, ref: 'Topic' },
   comments: {
     type: [{ body: String, date: Date }],
     default: []
   },
   date: {
     type: Date,
-    default: Date.now()
+    default: new Date()
   },
   draft: {
     type: Boolean,
     default: true
-  },
-  views: {
-    type: Number,
-    default: 0
   }
 });
-
-PostSchema.plugin(MongooseAutoIncrementID.plugin, { modelName: 'Post' });
 
 const Post = mongoose.model('Post', PostSchema);
 

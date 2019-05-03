@@ -1,9 +1,9 @@
 <template>
-  <div class="blog-item" :class="{ dark: data.dark, light: !data.dark }">
+  <div class="blog-item" :class="{ dark: dark, light: !dark }">
     <router-link
       class="sub-item"
       :to="`/blog/post/${titleUrl}`"
-    >{{ data.postedBy.firstName }} {{ data.postedBy.lastName }} • {{ relativeDate }}</router-link>
+    >{{ data.postedBy.fullName }} • {{ relativeDate }}</router-link>
     <h2>
       <router-link :to="`/blog/post/${titleUrl}`">{{ data.title }}</router-link>
     </h2>
@@ -86,7 +86,7 @@ TimeAgo.addLocale(en);
 const timeAgo = new TimeAgo('en-US');
 
 export default {
-  props: ['data'],
+  props: ['data', 'dark'],
   computed: {
     titleUrl() {
       return this.data.title;

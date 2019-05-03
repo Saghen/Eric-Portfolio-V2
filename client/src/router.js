@@ -1,5 +1,6 @@
 import Vue from 'vue';
 import Router from 'vue-router';
+import store from './store';
 
 Vue.use(Router);
 
@@ -13,8 +14,7 @@ const router = new Router({
   base: process.env.BASE_URL,
   routes: [
     {
-      path: '/',
-      name: 'home',
+      path: '',
       component: loadView('Home'),
       meta: {
         title: 'Eric Dyer - Portfolio'
@@ -25,25 +25,69 @@ const router = new Router({
       meta: {
         title: 'Sea of Electrons'
       },
+      component: loadView('blog/Blog'),
       children: [
         {
-          path: '',
+          path: '/',
           component: loadView('blog/Home')
         },
         {
-          path: 'insert',
-          component: loadView('blog/Insert'),
+          path: 'manage',
           meta: {
             auth: true,
-            title: 'Insert Post - Sea of Electrons'
-          }
+            title: 'Manage Posts - Sea of Electrons',
+            theme: 'dark',
+            headerStuck: true,
+            sideNav: true
+          },
+          component: loadView('blog/manage/Base'),
+          children: [
+            {
+              path: '',
+              component: loadView('blog/manage/Home')
+            },
+            {
+              path: 'insert',
+              component: loadView('blog/manage/Insert'),
+              meta: {
+                title: 'Insert Post - Sea of Electrons'
+              }
+            },
+            {
+              path: 'edit',
+              component: loadView('blog/manage/Edit'),
+              meta: {
+                title: 'Edit Post - Sea of Electrons'
+              }
+            },
+            {
+              path: 'authors',
+              component: loadView('blog/manage/Authors'),
+              meta: {
+                title: 'Manage Authors - Sea of Electrons'
+              }
+            },
+            {
+              path: 'topics',
+              component: loadView('blog/manage/Topics'),
+              meta: {
+                title: 'Manage Topics - Sea of Electrons'
+              }
+            },
+            {
+              path: 'images',
+              component: loadView('blog/manage/Images'),
+              meta: {
+                title: 'Manage Images - Sea of Electrons'
+              }
+            }
+          ]
         },
         {
           path: 'post/:title',
           component: loadView('blog/Post')
         }
-      ],
-      component: loadView('blog/Blog')
+      ]
     }
   ]
 });
@@ -57,18 +101,40 @@ router.beforeEach((to, from, next) => {
 
   // This goes through the matched routes from last to first, finding the closest route with a title.
   // eg. if we have /some/deep/nested/route and /some, /deep, and /nested have titles, nested's will be chosen.
-  const nearestWithTitle = to.matched
-    .slice()
-    .reverse()
-    .find(r => r.meta && r.meta.title);
+  const arrayForNearest = to.matched.slice().reverse();
+
+  const nearestWithTitle = arrayForNearest.find(r => r.meta && r.meta.title);
 
   // Find the nearest route element with meta tags.
-  const nearestWithMeta = to.matched
-    .slice()
-    .reverse()
-    .find(r => r.meta && r.meta.metaTags);
+  const nearestWithMeta = arrayForNearest.find(r => r.meta && r.meta.metaTags);
 
-  if (nearestWithTitle) document.title = nearestWithTitle.meta.title;
+  const nearestWithTheme = arrayForNearest.find(r => r.meta && r.meta.theme);
+
+  const nearestWithHeaderStuck = arrayForNearest.find(
+    r => r.meta && r.meta.headerStuck
+  );
+
+  const nearestWithSideNav = arrayForNearest.find(
+    r => r.meta && r.meta.sideNav
+  );
+
+
+  document.title = nearestWithTitle ? nearestWithTitle.meta.title : 'Sea of Electrons - Blog';
+
+  store.commit(
+    'changeTheme',
+    nearestWithTheme ? nearestWithTheme.meta.theme : 'light'
+  );
+
+  store.commit(
+    'changeStuck',
+    nearestWithHeaderStuck ? nearestWithHeaderStuck.meta.headerStuck : false
+  );
+
+  store.commit(
+    'changeSideNavExists',
+    nearestWithSideNav ? nearestWithSideNav.meta.sideNav : false
+  );
 
   // Remove any stale meta tags from the document using the key attribute we set below.
   Array.from(document.querySelectorAll('[data-vue-router-controlled]')).map(

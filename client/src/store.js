@@ -8,7 +8,11 @@ export default new Vuex.Store({
     navBarTheme: 'dark',
     navBarStuck: false,
     accessToken:  localStorage.getItem('access_token') ||  '',
-    currentUser: {}
+    currentUser: {},
+    sideNav: {
+      open: false,
+      exists: false
+    }
   },
   mutations: {
     changeTheme(state, theme) {
@@ -16,6 +20,12 @@ export default new Vuex.Store({
     },
     changeStuck(state, stuck) {
       state.navBarStuck = !!stuck;
+    },
+    changeSideNavOpen(state, value) {
+      state.sideNav.open = !!value;
+    },
+    changeSideNavExists(state, value) {
+      state.sideNav.exists = !!value;
     }
   }
 });

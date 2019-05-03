@@ -62,8 +62,23 @@ div.input {
 }
 
 .seperator {
-  margin: 16px auto;
-  height: 2px;
-  width: 100px;
-  background: #000;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  width: 40px;
+  height: 24px;
+
+  &::before {
+    content: url(/icons/dots.svg);
+  }
+}
+
+.seperator-tall {
+  margin-top: 48px;
+  margin-bottom: 48px;
+  width: 40px;
+  height: 24px;
+
+  &::before {
+    content: url(/icons/dots.svg);
+  }
 }

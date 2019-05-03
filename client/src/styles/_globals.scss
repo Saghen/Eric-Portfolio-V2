@@ -2,11 +2,16 @@ $serif: 'Roboto Slab', 'Times New Roman', Times, serif;
 $sans-serif: 'Helvetica', sans-serif;
 
 $primary: #2a967b;
-$text-primary: #fff;
+$textPrimary: #fff;
 $width: 1200px;
 
+$navBarHeight: 100px;
+
+$boxShadow: 0 0 8px 2px rgba(0,0,0, 0.3);
+$boxShadowHover: 0 0 16px 2px rgba(0,0,0, 0.3);
+
 %anchor-reset {
-  color: $text-primary;
+  color: $textPrimary;
   text-decoration: none;
 }
 

@@ -1,6 +1,6 @@
 <template>
   <div id="picker">
-    <a @click="updateImages" class="button">Update Images</a>
+    <a @click="refresh" class="button">Refresh</a>
     <div id="images">
       <a
         v-for="(image, key) of activeImages"
@@ -10,7 +10,7 @@
         <img :src="`/images/${image}?size=512`">
       </a>
     </div>
-    <pagination v-model="page" :max-pages="maxPages"></pagination>
+    <pagination v-if="maxPage > 1" v-model="page" :maxPage="maxPage"></pagination>
   </div>
 </template>
 
@@ -29,7 +29,7 @@ export default {
     };
   },
   methods: {
-    updateImages() {
+    refresh() {
       this.$http
         .get('/api/images/list')
         .then(res => (this.images = res.data.data));
@@ -41,7 +41,13 @@ export default {
       el.select();
       document.execCommand('copy');
       document.body.removeChild(el);
-      console.log('hi');
+      this.sendToast('Copied to clipboard');
+    },
+    sendToast(text) {
+      this.$toasted.show(text, {
+        type: 'success',
+        duration: 5000
+      });
     }
   },
   computed: {
@@ -62,12 +68,12 @@ export default {
 
       return activeImages;
     },
-    maxPages() {
+    maxPage() {
       return Math.ceil(this.images.length / this.countPerPage);
     }
   },
   mounted() {
-    this.updateImages();
+    this.refresh();
   }
 };
 </script>

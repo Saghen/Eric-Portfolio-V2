@@ -2,7 +2,7 @@
   <div id="post">
     <div id="upper">
       <div>
-        <span id="post-topic">{{ topic }}</span>
+        <span id="post-topic">{{ topic.topic }}</span>
         <h1 id="post-title">{{ title }}</h1>
       </div>
     </div>

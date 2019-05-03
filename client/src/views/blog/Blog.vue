@@ -5,8 +5,11 @@
     <modal id="login" name="login" height="auto">
       <login></login>
     </modal>
-    
-    <toast position="se"></toast>
+    <modal id="confirmation" name="confirmation" height="auto">
+      <login></login>
+    </modal>
+    <v-dialog/>
+    <toast position="se" duration="5000"></toast>
   </div>
 </template>
 

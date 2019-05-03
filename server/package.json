@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon ."
+    "dev": "NODE_ENV=development DISABLE_AUTH=true nodemon .",
+    "devAuth": "NODE_ENV=development nodemon .",
+    "prod": "NODE_ENV=production DISABLE_AUTH=false nodemon ."
   },
   "author": "",
   "license": "ISC",

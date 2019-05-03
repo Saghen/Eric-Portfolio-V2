@@ -14,7 +14,7 @@ api.prefix('/api');
 
 api.use(apiLogger(str => logger.debug(str)));
 
-api.use(require('./blog').middleware());
+api.use(require('./blog/').middleware());
 api.use(require('./auth').middleware());
 api.use(require('./images').middleware());
 
@@ -30,6 +30,5 @@ api.router.all('*', async ctx => {
     ]
   });
 });
-
 
 module.exports = api;

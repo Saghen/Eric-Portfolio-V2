@@ -35,7 +35,8 @@ module.exports = {
     cookieOptions: {
       httpOnly: true,
       secure: !isDevelopment()
-    }
+    },
+    disable: process.env.DISABLE_AUTH === 'true' || false
   },
 
   images: {
