@@ -38,6 +38,7 @@ module.exports = function () {
     mongoose.connection.once('open', () => {
       logger.info(chalk.yellow.bold('Mongo DB connected.'));
       logger.spacer('');
+      require('Core/seed-db');
     });
 
 
